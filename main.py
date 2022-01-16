@@ -71,32 +71,60 @@ async def download(ctx, arg):
     song_name = raw_track_meta["name"]
     contributing_artists = ", ".join([artist["name"] for artist in raw_track_meta["artists"]])
     file_name = f"{contributing_artists} - {song_name}.mp3"
+
     await ctx.send("Downloading song...")
     os.system(f"spotdl {url}")
     os.rename(file_name, file_name.replace(" ", ""))
     file_name = file_name.replace(" ", "")
+
     await ctx.send('Here is your song:', file=discord.File(file_name))
     os.remove(file_name)
 
+# OPTION 1: join channel to play snippet
+# OPTION 2: sends snippet to chat
 @bot.command()
-async def playlist(ctx, arg):
+async def play(ctx, url):
     global GUESSING, SONG_TITLE, GUESSING_AUTHOR
 
-    url = arg
+    # OPTION 1 RELATED -----------------------------------
+    # chooses channel based on where user is -- returns error if not in one
+    try:
+        vc = discord.utils.get(ctx.guild.voice_channels, name=ctx.author.voice.channel.name)
+    except AttributeError:
+        await ctx.send("You are not in a channel!")
+        return
+
+    # connects to channel
+    try:
+        await vc.connect()
+    except discord.ClientException:
+        print("Already connected!")
+
+    voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    # ----------------------------------------------------------
+
     await ctx.send("Getting tracks...")
     lst_of_name_link = playlist_songs_url(url)
+
     await ctx.send("Picking a song...")
     song_tuple = random.choice(lst_of_name_link)
-    raw_track_meta = from_url(song_tuple[1])
-    contributing_artists = ", ".join([artist["name"] for artist in raw_track_meta["artists"]])
-    song_name = raw_track_meta["name"]
-    file_name = f"{contributing_artists} - {song_name}.mp3"
+
+    # check if song.mp3 already exists, delete if so
+    song_check()
+
     await ctx.send("Loading song...")
     os.system(f"spotdl {song_tuple[1]}")
-    os.rename(file_name, "full.mp3")
-    os.system('ffmpeg -i full.mp3 -ss 00:00:30 -t 00:00:05.0 -c copy song.mp3')
-    await ctx.send('Guess the song title', file=discord.File("song.mp3"))
-    os.remove("song.mp3")
+    # renames the (should be) only .mp3 file
+    for file in os.listdir("./"):
+        if file.endswith(".mp3"):
+            os.rename(file, "full.mp3")
+    os.system("ffmpeg -ss 00:00:30.0 -i full.mp3 -t 00:00:05.0 -c copy song.mp3")
+
+    # OPTION 1
+    voice.play(discord.FFmpegPCMAudio("song.mp3"))
+    # OPTION 2
+    # await ctx.send('Guess the song title', file=discord.File("song.mp3"))
+
     os.remove("full.mp3")
     GUESSING = True
     SONG_TITLE = song_tuple[0]
@@ -109,6 +137,15 @@ async def playlist(ctx, arg):
         else:
             await ctx.send(f"Wrong answer! The song was {SONG_TITLE}")
         GUESSING = False
+
+
+def song_check():
+    song_there = os.path.isfile("song.mp3")
+    try:
+        if song_there:
+            os.remove("song.mp3")
+    except PermissionError:
+        print("Song is not complete")
 
 
 def playlist_songs_url(playlist_url: str) -> list:
