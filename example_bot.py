@@ -45,13 +45,13 @@ async def play(ctx, url : str):
 
     # run command
     os.system("spotdl " + url)
-    #
-    # snip_there = os.path.isfile("snip.mp3")
-    # try:
-    #     if snip_there:
-    #         os.remove("snip.mp3")
-    # except PermissionError:
-    #     await ctx.send("Wait for the current song to finish")
+
+    snip_there = os.path.isfile("snip.mp3")
+    try:
+        if snip_there:
+            os.remove("snip.mp3")
+    except PermissionError:
+        await ctx.send("Wait for the current song to finish")
 
     # rename song
     for file in os.listdir("./"):
