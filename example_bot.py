@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import time
 import os
 # import logging
 #
@@ -23,7 +22,7 @@ async def test(ctx, *arg):
 
 
 @bot.command()
-async def play(ctx, url : str):
+async def play(ctx, url: str):
     # saves file called song.mp3 in local directory
     # if it already exists, we'll replace it
     song_there = os.path.isfile("song.mp3")
