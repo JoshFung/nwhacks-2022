@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import youtube_dl
+import time
 import os
 # import logging
 #
@@ -33,34 +33,39 @@ async def play(ctx, url : str):
     except PermissionError:
         await ctx.send("Wait for the current song to finish")
 
-    # connects based on user's channel -- returns error if not in one
+    # chooses channel based on where user is -- returns error if not in one
     try:
         vc = discord.utils.get(ctx.guild.voice_channels, name=ctx.author.voice.channel.name)
     except AttributeError:
         await ctx.send("You are not in a channel!")
         return
 
-    await vc.connect()
+    # connects to channel
+    try:
+        await vc.connect()
+    except discord.ClientException:
+        print("Already connected!")
+
     voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
 
-    # specifying options for our song download
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }]
-    }
+    # run command
+    os.system("spotdl " + url)
+    #
+    # snip_there = os.path.isfile("snip.mp3")
+    # try:
+    #     if snip_there:
+    #         os.remove("snip.mp3")
+    # except PermissionError:
+    #     await ctx.send("Wait for the current song to finish")
 
-    # download video
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-
+    # rename song
     for file in os.listdir("./"):
         if file.endswith(".mp3"):
             os.rename(file, "song.mp3")
-    voice.play(discord.FFmpegPCMAudio("song.mp3"))
+
+    # run ffmpeg command to cut snippet and rename, then play
+    os.system("ffmpeg -y -ss 00:00:30.0 -i song.mp3 -t 00:00:05.0 -c copy snip.mp3")
+    voice.play(discord.FFmpegPCMAudio("snip.mp3"))
 
 
 @bot.command()
