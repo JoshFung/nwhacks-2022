@@ -1,12 +1,7 @@
 import discord
 from discord.ext import commands
-import time
 import os
-# import logging
-#
-# logging.basicConfig(level=logging.INFO)
 
-# client = discord.Client()
 bot = commands.Bot(command_prefix='>')
 
 
