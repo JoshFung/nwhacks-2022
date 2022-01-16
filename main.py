@@ -1,6 +1,7 @@
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import os
 import discord
+from discord.ext import commands
 import random
 
 import spotipy
@@ -45,21 +46,28 @@ sp = spotipy.Spotify(
     )
 )
 
-load_dotenv()
-client = discord.Client()
+# load_dotenv()
+bot = commands.Bot(command_prefix='.')
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print("We have logged in as {0.user}".format(client))
+    print(f'\n\nLogged in as: {bot.user.name} - {bot.user.id}\nVersion: {discord.__version__}\n')
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game(name="Guessing "
+                                                                                       "songs..."
+                                                                                       "!"))
+    print(f'Successfully logged in and booted...!')
 
 
-@client.event
+@bot.event
 async def on_message(message):
     global GUESSING, SONG_TITLE, GUESSING_AUTHOR
-    if message.author == client.user:
+
+    # bot ignores own messages
+    if message.author == bot.user:
         return
 
+    # command to convert song into downloadable .mp3
     if message.content.startswith('.download') and ' ' in message.content:
         url = message.content.split(" ")[1]
         raw_track_meta = from_url(url)
@@ -72,6 +80,7 @@ async def on_message(message):
         file_name = file_name.replace(" ", "")
         await message.channel.send('Here is your song:', file=discord.File(file_name))
         os.remove(file_name)
+
     elif message.content.startswith('.playlist'):
         url = message.content.split(" ")[1]
         await message.channel.send("Getting tracks...")
@@ -85,15 +94,16 @@ async def on_message(message):
         await message.channel.send("Loading song...")
         os.system(f"spotdl {song_tuple[1]}")
         os.rename(file_name, "full.mp3")
-        os.system('ffmpeg -i full.mp3 -ss 30 -to 60 -c copy song.mp3')
+        os.system('ffmpeg -i full.mp3 -ss 00:00:30 -t 00:00:05.0 -c copy song.mp3')
         await message.channel.send('Guess the song title', file=discord.File("song.mp3"))
         os.remove("song.mp3")
         os.remove("full.mp3")
         GUESSING = True
         SONG_TITLE = song_tuple[0]
         GUESSING_AUTHOR = message.author
+
     elif GUESSING and message.author == GUESSING_AUTHOR:
-        if (message.content == SONG_TITLE):
+        if message.content == SONG_TITLE:
             await message.channel.send("You guessed right!")
         else:
             await message.channel.send(f"Wrong answer! The song was {SONG_TITLE}")
@@ -104,4 +114,5 @@ def playlist_songs_url(playlist_url: str) -> list:
     return [(song._raw_track_meta['name'], song._raw_track_meta['external_urls']['spotify']) for
             song in from_playlist(playlist_url)]
 
-client.run(os.environ.get('TOKEN'))
+
+bot.run(os.environ.get('TOKEN'))
