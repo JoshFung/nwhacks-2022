@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 import discord
 import random
@@ -7,6 +8,10 @@ from spotdl.search import SpotifyClient
 from spotipy.oauth2 import SpotifyOAuth
 
 from spotdl.search.song_gatherer import from_playlist
+
+GUESSING = False
+SONG_TITLE = ""
+GUESSING_AUTHOR = ""
 
 SpotifyClient.init(
     os.getenv('SPOTIPY_CLIENT_ID'),
@@ -40,6 +45,7 @@ sp = spotipy.Spotify(
     )
 )
 
+load_dotenv()
 client = discord.Client()
 
 
@@ -50,6 +56,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    global GUESSING, SONG_TITLE, GUESSING_AUTHOR
     if message.author == client.user:
         return
 
@@ -65,11 +72,33 @@ async def on_message(message):
         file_name = file_name.replace(" ", "")
         await message.channel.send('Here is your song:', file=discord.File(file_name))
         os.remove(file_name)
-
-    if message.content.startswith('.playlist'):
+    elif message.content.startswith('.playlist'):
         url = message.content.split(" ")[1]
+        await message.channel.send("Getting tracks...")
         lst_of_name_link = playlist_songs_url(url)
+        await message.channel.send("Picking a song...")
         song_tuple = random.choice(lst_of_name_link)
+        raw_track_meta = from_url(song_tuple[1])
+        contributing_artists = ", ".join([artist["name"] for artist in raw_track_meta["artists"]])
+        song_name = raw_track_meta["name"]
+        file_name = f"{contributing_artists} - {song_name}.mp3"
+        await message.channel.send("Loading song...")
+        os.system(f"spotdl {song_tuple[1]}")
+        os.rename(file_name, "full.mp3")
+        os.system('ffmpeg -i full.mp3 -ss 30 -to 60 -c copy song.mp3')
+        await message.channel.send('Guess the song title', file=discord.File("song.mp3"))
+        os.remove("song.mp3")
+        os.remove("full.mp3")
+        GUESSING = True
+        SONG_TITLE = song_tuple[0]
+        GUESSING_AUTHOR = message.author
+    elif GUESSING and message.author == GUESSING_AUTHOR:
+        if (message.content == SONG_TITLE):
+            await message.channel.send("You guessed right!")
+        else:
+            await message.channel.send(f"Wrong answer! The song was {SONG_TITLE}")
+        GUESSING = False
+
 
 def playlist_songs_url(playlist_url: str) -> list:
     return [(song._raw_track_meta['name'], song._raw_track_meta['external_urls']['spotify']) for
