@@ -139,6 +139,16 @@ async def play(ctx, url):
         GUESSING = False
 
 
+@bot.command()
+async def disconnect(ctx):
+    if ctx.voice_client and ctx.author.voice.channel and ctx.author.voice.channel == \
+            ctx.voice_client.channel:
+        await ctx.voice_client.disconnect()
+        await ctx.send("Disconnecting...")
+    else:
+        await ctx.send("You have to be connected to the same voice channel to disconnect me.")
+
+
 def song_check():
     song_there = os.path.isfile("song.mp3")
     try:
