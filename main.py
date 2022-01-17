@@ -59,10 +59,6 @@ async def on_ready():
     print(f'Successfully logged in and booted...!')
 
 
-# bot ignores own messages
-# if message.author == bot.user:
-#    return
-
 @bot.command()
 async def download(ctx, arg):
     # command to convert song into downloadable .mp3
@@ -132,7 +128,8 @@ async def play(ctx, url):
     guess = await bot.wait_for('message')
 
     if GUESSING and guess.author == GUESSING_AUTHOR:
-        if guess.content == SONG_TITLE:
+        # if guess.content == SONG_TITLE:
+        if guess.content.lower() == SONG_TITLE.lower().split(' (')[0]:
             await ctx.send("You guessed right!")
         else:
             await ctx.send(f"Wrong answer! The song was {SONG_TITLE}")
